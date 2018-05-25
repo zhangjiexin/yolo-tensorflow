@@ -11,21 +11,24 @@ import collections
 import random
 import numpy
 import multiprocessing as mp
+import tensorflow as tf
+import cv2
 from multiprocessing.sharedctypes import Array
 from ctypes import c_double, cast, POINTER
 os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
 
 if 'Windows' in platform.platform():
-    store_dir = 'E:\Github\\table-detection\\'
+    #store_dir = 'D:\code\\yolo-tensorflow\\'
+    data_dir = 'D:\code\\yolo-tensorflow\\'
 elif 'Linux' in platform.platform():
-    data_dir = '/home/ZhangJiexin/yolo-tensorflow/'
+    data_dir = '/home/caory/github/yolo-tensorflow/'
 
 
 def main(method='train', gpus=''):
     from src.data.data_basic import Processor
     from src.network.network_basic import Network
     from src.model.model_basic import Model
-   
+    
     option = collections.OrderedDict()
     option['batch_size'] = 32
     option['image_x_size'] = 448
@@ -36,9 +39,9 @@ def main(method='train', gpus=''):
     option['cell_y_size'] = 7
     option['pool_mode'] = 'max'
     option['n_boxes'] = 5
-    option['n_processes'] = 1
+    option['n_processes'] = 2
     option['max_objects'] = 30
-    option['n_iter'] = 600000000
+    option['n_iter'] = 200000
     option['buffer_size'] = 5
     option['gpus'] = gpus
     option['n_gpus'] = len(gpus.split(',')) if len(gpus.split(',')) != 0 else 1
@@ -57,7 +60,7 @@ def main(method='train', gpus=''):
     option['seq'] = 'voc-v1'
     option['model'] = 'model_best.ckpt'
     option['update_function'] = 'momentum'
-    option['is_observe'] = True
+    option['is_observe'] = False
     
     # 打印option
     print()
@@ -119,8 +122,6 @@ def main(method='train', gpus=''):
         is_observe = option['is_observe']) 
     
     if method == 'train':
-	
-
         # 训练模型
         train_image_paths_file = os.path.join(data_dir, 'datasets', option['train_data'], 'train.txt')
         test_image_paths_file = os.path.join(data_dir, 'datasets', option['test_data'], 'valid.txt')
@@ -149,15 +150,39 @@ def main(method='train', gpus=''):
             n_iters=option['n_iter'])
         
     elif method == 'test':
-	# fetch one batch of data
+        
+        # fetch one batch of data
         print("Start fetching data")
         test_image_paths_file = os.path.join(data_dir, 'datasets', option['train_data'], 'test.txt')
         processor.load_datasets('train', image_paths_file=test_image_paths_file)
         dataset = processor.trainsets
         batch_indexs, batch_images, batch_labels = processor.get_random_batch(dataset,batch_size=processor.batch_size)
+        # print("Before transformation,the type of batch_images is ",type(batch_images))
+        # print(len(batch_images))
+        batch_images = processor.convert_batch_infos(batch_images)
+        # print("After transformation,the shape of batch_images is ",batch_images.shape)
+        # print("Before transformation,the type of batch_images is ",type(batch_images))
+        # cv2.imshow("image before transformation",numpy.array(batch_images[0]))
+        batch_images = numpy.array(batch_images / 255.0,dtype='float32')
+        # print("After transformation,the type of batch_images is ",type(batch_images))
+        print("Finish fetching data")
+        # cv2.imshow("image after transformation",numpy.array(batch_images[0]))
         
-        # # testing this batch of data
+
+        # testing this batch of data
+        # cv2.imshow('image1',batch_images[1])
+        # cv2.waitKey(3000)
+        # cv2.imshow('image2',dataset[batch_indexs[1]]['image'])
+        # cv2.waitKey(3000)
+        # img_from_path = cv2.imread(dataset[batch_indexs[1]]['image_path'])
+        # cv2.imshow('image3',img_from_path)
+        # cv2.waitKey(3000)
         # print(dataset[1].keys())
+        # print(dataset[1]['image_name'])
+        # print(dataset[1]['image_path'])
+        # image = cv2.imread(dataset[1]['image_path'])
+        # cv2.imshow('image_sample',image)
+        # cv2.waitKey(3000)
         # print(dataset[1]["label"])
         # print("batch_indexs type: ",type(batch_indexs))
         # print("batch_images type: ",type(batch_images))
@@ -187,61 +212,169 @@ def main(method='train', gpus=''):
 
         # set up session
 
-        # print("Start setting session")
+        print("Start setting session")
+        model.valid_init(processor,network)
         # gpu_options = tf.GPUOptions(allow_growth=True)
         # sess = tf.Session(config=tf.ConfigProto(
         #         gpu_options=gpu_options, allow_soft_placement=True))
         backup_path = os.path.join(data_dir,"backup\\voc-v1")
-        print("finish setting session")
+        # print("finish setting session")
         # load trained model
-        # print("Start loading model")
-        # meta_path = os.path.join(backup_path,'model_.ckpt.meta')
-        # checkpoint_path = os.path.join(backup_path,'model_.ckpt')
-        # model_saver = tf.train.import_meta_graph(meta_path)
-        # model_saver.restore(sess,checkpoint_path)
+        print("Start loading model")
+        datasets_for_pred = batch_indexs, batch_images, batch_labels
+        logit_list = []
+        with model.sess as sess:
+            meta_path = os.path.join(backup_path,'model_.ckpt.meta')
+            checkpoint_path = os.path.join(backup_path,'model_.ckpt')
+            model_saver = tf.train.import_meta_graph(meta_path)
+            model_saver.restore(sess,checkpoint_path)
+            print("Finish loading model")
+            sess.run(tf.global_variables_initializer())
+            print("Finish calling global_variables_initializer")
 
-        print("Finish loading model")
+            # define an option
+            valid_logits = network.get_inference(batch_images)
+            # print("Testing run conv1_def/weight")
+            # sess.run("conv1_def/weight")
+            # print("Finish testing run conv1_def/weight")
+
+            # inference once and get result
+            sess.run(valid_logits)
+            print(valid_logits.shape)
         
-        print("Before transformation,the type of batch_images is ",type(batch_images))
-        print(len(batch_images))
-        batch_images = processor.convert_batch_infos(batch_images)
-        print("After transformation,the shape of batch_images is ",batch_images.shape)
+            
+            
+            # transform logits into numpyarrays 
+            valid_logits_np = valid_logits.eval(session = sess)
+            logit_list.append(valid_logits_np)
+        preds_boxes = []
+        with model.sess as sess:
+            # use reult to get predict boxes
+            valid_logits_np = logit_list[0]
+            preds_boxes = model.get_pred_boxes(valid_logits_np,datasets_for_pred,option['batch_size'])
+        print("Type of preds_boxes is ",type(preds_boxes))
+        print("The Type of each box is",type(preds_boxes[0]))
+        print("The Type of each element in box is",type(preds_boxes[0][0]))
+        print("Number of boxes in each image",len(preds_boxes[0]))
+        # print(preds_boxes[0])
+        # os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
-        batch_images = numpy.array(batch_images / 255.0,dtype='float32')
+        # before drawing the boxes,we should tickout some of them
+        # boxes_of_image = []
+        # preds_boxes_picked = []
+        # for i in range(len(preds_boxes)):
+        #     for j in range(len(preds_boxes[i])):
+        #         # print(preds_boxes[i][j])
+        #         if (preds_boxes[i][j]['prob'] > 0.7):
+        #             boxes_of_image.append(preds_boxes[i][j])
+        #             # print("preds_boxes[i][j]['prob'] is ",preds_boxes[i][j]['prob'])
+        #     preds_boxes_picked.append(boxes_of_image)
+        #     boxes_of_image.clear()
+        # print(preds_boxes_picked[0])
+        # print(preds_boxes[0][0]['box'])
+        # for i in range(len(preds_boxes)):
+        #     for j in range(len(preds_boxes[i])):
+        #         print(preds_boxes[i][j]['box'])
 
-        print("After transformation,the type of batch_images is ",type(batch_images))
 
-        # batch_images = tf.convert_to_tensor(batch_images)
-        # sess.run(network.conv_layer1.weight)
-        # print(network.conv_layer1.weight)
+        for j in range(len(preds_boxes)):
+                # docid = datasets_for_pred[j]['docid']
+                # pageid = int(datasets_for_pred[j]['pageid'])
+                # output_path = os.path.join(output_dir, 'predictions', '%s_%d.png' % (
+                #     docid, pageid))
+                # image_path = datasets_for_pred[j]['path']
+                # show_path = datasets_for_pred[j]['content']['orig_image_path']
+
+                image_path = dataset[datasets_for_pred[0][j]]['image_path']
+                print("the image path is %s"%image_path)
+                image = cv2.imread(image_path)
         
-        # feed one batch of data and run
-        # tf.get_default_graph()
-        # print("Type of batch_images: ",type(batch_images))
-
-
-        model.train_init(network,backup_path)
-
-        logits = model.valid_logits
-        # os.environ['CUDA_VISIBLE_DEVICES'] = gpus
-        [logits] = model.sess.run(fetches=[model.valid_logits],
-        feed_dict={model.place_holders['images']: batch_images})
+                # 画预测的框
+                for i in range(len(preds_boxes[j])):
+                    if(preds_boxes[j][i]['prob'] > 0.9):
+                        [left, top, right, bottom] = [int(t) for t in preds_boxes[j][i]['box']]
+                        cv2.rectangle(image, (left, top), (right, bottom), (238, 192, 126), 2) # blue
+                cv2.imshow("testimage%d"%j,image)
+                
+                cv2.waitKey(500)
+        cv2.waitKey(5000)
         
-        model.sess.run(model.valid_logits)
-        print("Finish")
-        print(model.valid_logits)
+           
 
 
-        # 测试某一个已经训练好的模型
-        #test_image_paths_files=[os.path.join(data_dir, 'datasets', option['datas'][-1], 'test_tensor.txt')]
-        #processor.init_datasets(mode='test', test_image_paths_files=test_image_paths_files)
-        #os.environ['CUDA_VISIBLE_DEVICES'] = ''
-        #model_path = os.path.join(store_dir, 'backup', option['seq'], option['sub_dir'], option['model'])
-        #model.test_model(
-            #processor=processor, network=network, model_path=model_path,
-            #output_dir=os.path.join(store_dir, 'logs', option['seq']))
+            # print("Print variables")
+            # sess.run(tf.global_variables_initializer())
+            # trainable_variable_names = [v.name for v in tf.trainable_variables()]
+            # print("Variables trainable in this graph are:")
+            # for name in trainable_variable_names:
+            #     print(name)
+            # all_variable_names = [v.name for v in tf.all_variables()]
+            # print("All variables in this graph as follow:")
+            # for name in all_variable_names:
+            #     print(name)
+            
+            
+
+        
 
 
+     
+
+        
+        # print("Now get the shape of logits")
+        # print(result.shape)
+        print("Program done")
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+         # 测试某一个已经训练好的模型
+        # os.environ['CUDA_VISIBLE_DEVICES'] = ''
+        # model_path = os.path.join(store_dir, 'backup', option['seq'], option['sub_dir'], option['model'])
+        # model.test_model(
+        #     processor=processor, network=network, model_path=model_path,
+        #     output_dir=os.path.join(store_dir, 'logs', option['seq']))
+        
 if __name__ == '__main__':
     print('current process id: %d' % (os.getpid()))
     parser = argparse.ArgumentParser(description='parsing command parameters')
