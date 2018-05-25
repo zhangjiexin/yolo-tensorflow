@@ -18,7 +18,7 @@ os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
 if 'Windows' in platform.platform():
     store_dir = 'E:\Github\\table-detection\\'
 elif 'Linux' in platform.platform():
-    data_dir = '/home/caory/github/yolo-tensorflow/'
+    data_dir = '/home/ZhangJiexin/yolo-tensorflow/'
 
 
 def main(method='train', gpus=''):
@@ -36,9 +36,9 @@ def main(method='train', gpus=''):
     option['cell_y_size'] = 7
     option['pool_mode'] = 'max'
     option['n_boxes'] = 5
-    option['n_processes'] = 2
+    option['n_processes'] = 1
     option['max_objects'] = 30
-    option['n_iter'] = 200000
+    option['n_iter'] = 600000000
     option['buffer_size'] = 5
     option['gpus'] = gpus
     option['n_gpus'] = len(gpus.split(',')) if len(gpus.split(',')) != 0 else 1
@@ -119,6 +119,8 @@ def main(method='train', gpus=''):
         is_observe = option['is_observe']) 
     
     if method == 'train':
+	
+
         # 训练模型
         train_image_paths_file = os.path.join(data_dir, 'datasets', option['train_data'], 'train.txt')
         test_image_paths_file = os.path.join(data_dir, 'datasets', option['test_data'], 'valid.txt')
@@ -145,14 +147,97 @@ def main(method='train', gpus=''):
             n_iters=option['n_iter'])
         
     elif method == 'test':
+	# fetch one batch of data
+        print("Start fetching data")
+        test_image_paths_file = os.path.join(data_dir, 'datasets', option['train_data'], 'test.txt')
+        processor.load_datasets('train', image_paths_file=test_image_paths_file)
+        dataset = processor.trainsets
+        batch_indexs, batch_images, batch_labels = processor.get_random_batch(dataset,batch_size=processor.batch_size)
+        
+        # # testing this batch of data
+        # print(dataset[1].keys())
+        # print(dataset[1]["label"])
+        # print("batch_indexs type: ",type(batch_indexs))
+        # print("batch_images type: ",type(batch_images))
+        # print("batch_labels type: ",type(batch_labels))
+        # print("batch_indexs element type: ",type(batch_indexs[1]))
+        # print("batch_images element type: ",type(batch_images[1]))
+        # print(batch_images[1])
+        # print("Shape of batch_images[1]: ",batch_images[1].shape)
+        # print("Shape of batch_images[2]: ",batch_images[2].shape)
+        # print("Shape of batch_images[3]: ",batch_images[3].shape)
+        # print("Shape of batch_images[4]: ",batch_images[4].shape)
+        # print("batch_labels element type: ",type(batch_labels[1]))
+        
+        # print("A sample of using numpy in cv")
+        # emptyimage = numpy.zeros(batch_images[1].shape,numpy.uint8)
+        
+        # print(dataset[1].keys())
+        # print(dataset[1]["image_path"])
+        
+        
+        # img_np = batch_images[1]
+        # img1 = cv2.imread(dataset[1]["image_path"])
+        # cv2.imshow("img",img_np)
+        # cv2.waitKey(5000)
+        
+
+
+        # set up session
+
+        # print("Start setting session")
+        # gpu_options = tf.GPUOptions(allow_growth=True)
+        # sess = tf.Session(config=tf.ConfigProto(
+        #         gpu_options=gpu_options, allow_soft_placement=True))
+        backup_path = os.path.join(data_dir,"backup\\voc-v1")
+        print("finish setting session")
+        # load trained model
+        # print("Start loading model")
+        # meta_path = os.path.join(backup_path,'model_.ckpt.meta')
+        # checkpoint_path = os.path.join(backup_path,'model_.ckpt')
+        # model_saver = tf.train.import_meta_graph(meta_path)
+        # model_saver.restore(sess,checkpoint_path)
+
+        print("Finish loading model")
+        
+        print("Before transformation,the type of batch_images is ",type(batch_images))
+        print(len(batch_images))
+        batch_images = processor.convert_batch_infos(batch_images)
+        print("After transformation,the shape of batch_images is ",batch_images.shape)
+
+        batch_images = numpy.array(batch_images / 255.0,dtype='float32')
+
+        print("After transformation,the type of batch_images is ",type(batch_images))
+
+        # batch_images = tf.convert_to_tensor(batch_images)
+        # sess.run(network.conv_layer1.weight)
+        # print(network.conv_layer1.weight)
+        
+        # feed one batch of data and run
+        # tf.get_default_graph()
+        # print("Type of batch_images: ",type(batch_images))
+
+
+        model.train_init(network,backup_path)
+
+        logits = model.valid_logits
+        # os.environ['CUDA_VISIBLE_DEVICES'] = gpus
+        [logits] = model.sess.run(fetches=[model.valid_logits],
+        feed_dict={model.place_holders['images']: batch_images})
+        
+        model.sess.run(model.valid_logits)
+        print("Finish")
+        print(model.valid_logits)
+
+
         # 测试某一个已经训练好的模型
-        test_image_paths_files=[os.path.join(data_dir, 'datasets', option['datas'][-1], 'test_tensor.txt')]
-        processor.init_datasets(mode='test', test_image_paths_files=test_image_paths_files)
-        os.environ['CUDA_VISIBLE_DEVICES'] = ''
-        model_path = os.path.join(store_dir, 'backup', option['seq'], option['sub_dir'], option['model'])
-        model.test_model(
-            processor=processor, network=network, model_path=model_path,
-            output_dir=os.path.join(store_dir, 'logs', option['seq']))
+        #test_image_paths_files=[os.path.join(data_dir, 'datasets', option['datas'][-1], 'test_tensor.txt')]
+        #processor.init_datasets(mode='test', test_image_paths_files=test_image_paths_files)
+        #os.environ['CUDA_VISIBLE_DEVICES'] = ''
+        #model_path = os.path.join(store_dir, 'backup', option['seq'], option['sub_dir'], option['model'])
+        #model.test_model(
+            #processor=processor, network=network, model_path=model_path,
+            #output_dir=os.path.join(store_dir, 'logs', option['seq']))
 
 
 if __name__ == '__main__':

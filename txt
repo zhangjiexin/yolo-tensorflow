@@ -1,0 +1,119 @@
+current process id: 43486
+
+batch_size           = 32
+image_x_size         = 448
+image_y_size         = 448
+n_channel            = 3
+n_classes            = 20
+cell_x_size          = 7
+cell_y_size          = 7
+pool_mode            = max
+n_boxes              = 5
+n_processes          = 2
+max_objects          = 30
+n_iter               = 200000
+buffer_size          = 5
+gpus                 = 0
+n_gpus               = 1
+is_multigpu          = False
+is_valid             = False
+noobject_scale       = 0.5
+object_scale         = 1
+coord_scale          = 5
+class_scale          = 1
+is_weight_decay      = False
+weight_decay         = 0.001
+learning_rate        = 0.0001
+is_lr_decay          = False
+train_data           = voc
+test_data            = voc
+seq                  = voc-v1
+model                = model_best.ckpt
+update_function      = momentum
+is_observe           = True
+
+
+Name      	Filter                   	Input               	Output              	Field
+conv1     	((7, 7) / (2, 2) * 32)   	(448, 448, 3)       	(224, 224, 32)      	(5, 5)
+pool1     	((2, 2) / (2, 2))        	(224, 224, 32)      	(112, 112, 32)      	(6, 6)
+conv2     	((3, 3) / (1, 1) * 96)   	(112, 112, 32)      	(112, 112, 96)      	(10, 10)
+pool2     	((2, 2) / (2, 2))        	(112, 112, 96)      	(56, 56, 96)        	(12, 12)
+conv3     	((1, 1) / (1, 1) * 64)   	(56, 56, 96)        	(56, 56, 64)        	(16, 16)
+conv4     	((3, 3) / (1, 1) * 128)  	(56, 56, 64)        	(56, 56, 128)       	(24, 24)
+conv5     	((1, 1) / (1, 1) * 128)  	(56, 56, 128)       	(56, 56, 128)       	(28, 28)
+conv6     	((3, 3) / (1, 1) * 256)  	(56, 56, 128)       	(56, 56, 256)       	(36, 36)
+pool3     	((2, 2) / (2, 2))        	(56, 56, 256)       	(28, 28, 256)       	(40, 40)
+conv7     	((1, 1) / (1, 1) * 128)  	(28, 28, 256)       	(28, 28, 128)       	(48, 48)
+conv8     	((3, 3) / (1, 1) * 256)  	(28, 28, 128)       	(28, 28, 256)       	(64, 64)
+conv9     	((1, 1) / (1, 1) * 256)  	(28, 28, 256)       	(28, 28, 256)       	(72, 72)
+conv10    	((3, 3) / (1, 1) * 512)  	(28, 28, 256)       	(28, 28, 512)       	(88, 88)
+pool4     	((2, 2) / (2, 2))        	(28, 28, 512)       	(14, 14, 512)       	(96, 96)
+conv11    	((1, 1) / (1, 1) * 256)  	(14, 14, 512)       	(14, 14, 256)       	(112, 112)
+conv12    	((3, 3) / (1, 1) * 256)  	(14, 14, 256)       	(14, 14, 256)       	(144, 144)
+conv13    	((3, 3) / (1, 1) * 512)  	(14, 14, 256)       	(14, 14, 512)       	(176, 176)
+pool5     	((2, 2) / (2, 2))        	(14, 14, 512)       	(7, 7, 512)         	(192, 192)
+conv14    	((3, 3) / (1, 1) * 512)  	(7, 7, 512)         	(7, 7, 512)         	(228, 228)
+conv15    	((3, 3) / (1, 1) * 1024) 	(7, 7, 512)         	(7, 7, 1024)        	(228, 228)
+dense1    	(1024)                   	(50176)             	(1024)
+dense2    	(6370)                   	(1024)              	(6370)
+calculation: 3646.86M
+
+number of train images: 5717
+number of valid images: 2911
+finish apply shared memory ...
+Process producer0:
+Traceback (most recent call last):
+  File "/usr/lib/python2.7/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/usr/lib/python2.7/multiprocessing/process.py", line 114, in run
+    self._target(*self._args, **self._kwargs)
+  File "src/data/data_basic.py", line 177, in dataset_producer_based_shm
+    self.shared_memory.put(dataset)
+  File "src/data/data_basic.py", line 444, in put
+    data = numpy.ctypeslib.as_array(buffer_ptr, shape=(self.dataset_size, ))
+  File "/home/ZhangJiexin/.local/lib/python2.7/site-packages/numpy/ctypeslib.py", line 435, in as_array
+    prep_array(tp)
+  File "/home/ZhangJiexin/.local/lib/python2.7/site-packages/numpy/ctypeslib.py", line 384, in prep_array
+    ai = ob().__array_interface__
+AttributeError: 'LP_c_double' object has no attribute '__array_interface__'
+Process producer1:
+Traceback (most recent call last):
+  File "/usr/lib/python2.7/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/usr/lib/python2.7/multiprocessing/process.py", line 114, in run
+    self._target(*self._args, **self._kwargs)
+  File "src/data/data_basic.py", line 177, in dataset_producer_based_shm
+    self.shared_memory.put(dataset)
+  File "src/data/data_basic.py", line 444, in put
+    data = numpy.ctypeslib.as_array(buffer_ptr, shape=(self.dataset_size, ))
+  File "/home/ZhangJiexin/.local/lib/python2.7/site-packages/numpy/ctypeslib.py", line 435, in as_array
+    prep_array(tp)
+  File "/home/ZhangJiexin/.local/lib/python2.7/site-packages/numpy/ctypeslib.py", line 384, in prep_array
+    ai = ob().__array_interface__
+AttributeError: 'LP_c_double' object has no attribute '__array_interface__'
+2018-05-01 15:28:39.338914: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1212] Found device 0 with properties: 
+name: GeForce GTX 1080 Ti major: 6 minor: 1 memoryClockRate(GHz): 1.6575
+pciBusID: 0000:04:00.0
+totalMemory: 10.92GiB freeMemory: 8.35GiB
+2018-05-01 15:28:39.338975: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1312] Adding visible gpu devices: 0
+2018-05-01 15:28:39.553409: I tensorflow/core/common_runtime/gpu/gpu_device.cc:993] Creating TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:0 with 8068 MB memory) -> physical GPU (device: 0, name: GeForce GTX 1080 Ti, pci bus id: 0000:04:00.0, compute capability: 6.1)
+WARNING:tensorflow:From src/network/network_basic.py:291: calling reduce_max (from tensorflow.python.ops.math_ops) with keep_dims is deprecated and will be removed in a future version.
+Instructions for updating:
+keep_dims is deprecated, use keepdims instead
+
+start training ...
+
+Traceback (most recent call last):
+  File "/usr/lib/python2.7/runpy.py", line 174, in _run_module_as_main
+    "__main__", fname, loader, pkg_name)
+  File "/usr/lib/python2.7/runpy.py", line 72, in _run_code
+    exec code in run_globals
+  File "/home/ZhangJiexin/yolo-tensorflow/script/detect_basic.py", line 167, in <module>
+    main(method=method, gpus=gpus)
+  File "/home/ZhangJiexin/yolo-tensorflow/script/detect_basic.py", line 145, in main
+    n_iters=option['n_iter'])
+  File "src/model/model_basic.py", line 168, in train
+    data = processor.shared_memory.get()
+  File "src/data/data_basic.py", line 457, in get
+    time.sleep(0.1)
+KeyboardInterrupt

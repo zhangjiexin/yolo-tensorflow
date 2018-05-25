@@ -13,9 +13,9 @@ import random
 import platform
 import cv2
 import multiprocessing as mp
-from multiprocessing.sharedctypes import Array, Value
+from multiprocessing.sharedctypes import Array, Value,RawArray
 from ctypes import c_double, cast, POINTER
-
+import ctypes
 """
 数据处理类：对数据进行预处理、数据扩增等过程
 """
@@ -63,7 +63,8 @@ class Processor:
             self.object_mask_size, self.class_true_size, 
             self.unpos_coord_true_size, self.unpos_object_mask_size, 
             self.object_nums_size]])
-        
+        print('dataset_size:')
+        print(self.dataset_size)
         
     def init_datasets(self, mode, train_image_paths_file=None,
         test_image_paths_file=None): 
@@ -421,6 +422,7 @@ class SharedMemory:
     def __init__(self, buffer_size, dataset_size):
         self.buffer_size = buffer_size
         self.dataset_size = dataset_size
+#        print dataset_size
         self.put_index = Value('i', 0)
         self.get_index = Value('i', 0)
         self.put_lock = mp.Lock()
@@ -429,20 +431,42 @@ class SharedMemory:
         self.cbuffer = self.cdatasets._obj._wrapper
         
     def put(self, dataset):
+        #import pdb
         """
         将数据写入共享内存
         输入：dataset - 一个batch的数据（已经flatten）
         """
         # 向共享内存中生产数据
+#        with self.put_lock:
+#            while self.put_index.value - self.get_index.value >= self.buffer_size - 1:
+#                time.sleep(0.1)
+#            index = self.put_index.value % self.buffer_size
+            #(arena,start_address,stop_address),size = self.cbuffer._state
+            #buffer_ptr = cast(start_address + index * self.dataset_size * 8, POINTER(c_double))
+#           buffer_ptr = cast(self.cbuffer.get_address() + index * self.dataset_size * 8, POINTER(c_double))
+            #buffe = numpy.core.multiarray.int_asbuffer(stypes.addressof())
+#            print("test1")
+#            print(buffer_ptr)
+#            print(type(buffer_ptr))
+#            print(self.dataset_size)
+            #pdb.set_trace()
+            #numpy.ctypeslib.as_array(
+#            data = numpy.ctypeslib.as_array(buffer_ptr, shape=(self.dataset_size, ))
+#            print("test2")
+            #buffer = numpy.core.multiarray.int_asbuffer(ctypes.addressof(data.contents),numpy.dtype(double).itemsize*self.dataset_size)
+#            #data[:] = numpy.frombuffer(buffer,double)
+#            data[:] = dataset
+#            self.put_index.value += 1
         with self.put_lock:
             while self.put_index.value - self.get_index.value >= self.buffer_size - 1:
                 time.sleep(0.1)
             index = self.put_index.value % self.buffer_size
             buffer_ptr = cast(self.cbuffer.get_address() + index * self.dataset_size * 8, POINTER(c_double))
+#            print("test1")
             data = numpy.ctypeslib.as_array(buffer_ptr, shape=(self.dataset_size, ))
+#            print("test2")
             data[:] = dataset
             self.put_index.value += 1
-
     def get(self):
         """
         从共享内存读取数据

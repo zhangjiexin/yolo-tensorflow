@@ -278,7 +278,7 @@ class Model():
             
             # 每固定轮数保存一次模型
             if n_iter % 5000 == 0:
-                model_path = os.path.join(backup_dir, 'model_%d.ckpt' % (n_iter))
+                model_path = os.path.join(backup_dir, 'model_.ckpt')
                 self.saver.save(self.sess, model_path)
             
             sys.stdout.flush()
@@ -535,7 +535,8 @@ class Model():
     
     def write_train_images(self, batch_images, batch_coord_true, batch_class_true, logs_dir, index):
         if not os.path.exists(os.path.join(logs_dir, 'train')):
-            os.mkdir(os.path.join(logs_dir, 'train'))
+            #os.mkdir(os.path.join(logs_dir, 'train'))
+            os.makedirs(os.path.join(logs_dir, 'train'))
 
         for b in range(self.batch_size):
             image = numpy.array(batch_images[b]*255, dtype='uint8')
